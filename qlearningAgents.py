@@ -15,7 +15,6 @@
 from game import *
 from learningAgents import ReinforcementAgent
 from featureExtractors import *
-
 import random,util,math
 
 class QLearningAgent(ReinforcementAgent):
@@ -43,6 +42,7 @@ class QLearningAgent(ReinforcementAgent):
         ReinforcementAgent.__init__(self, **args)
 
         "*** YOUR CODE HERE ***"
+        self.qValues = util.Counter()
 
     def getQValue(self, state, action):
         """
@@ -51,8 +51,7 @@ class QLearningAgent(ReinforcementAgent):
           or the Q node value otherwise
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-
+        return self.qValues[(state, action)]
 
     def computeValueFromQValues(self, state):
         """
@@ -62,7 +61,16 @@ class QLearningAgent(ReinforcementAgent):
           terminal state, you should return a value of 0.0.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        legalActions = self.getLegalActions(state)
+        if not legalActions:
+            return 0.0
+        # return the max Q over actions
+        best = float("-inf")
+        for a in legalActions:
+            q = self.getQValue(state, a)
+            if q > best:
+                best = q
+        return best
 
     def computeActionFromQValues(self, state):
         """
@@ -71,7 +79,22 @@ class QLearningAgent(ReinforcementAgent):
           you should return None.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        legalActions = self.getLegalActions(state)
+        if not legalActions:
+            return None
+
+        # find the best Q value
+        bestValue = float("-inf")
+        bestActions = []
+        for a in legalActions:
+            q = self.getQValue(state, a)
+            if q > bestValue:
+                bestValue = q
+                bestActions = [a]
+            elif q == bestValue:
+                bestActions.append(a)
+        return random.choice(bestActions) # break ties randomly
+
 
     def getAction(self, state):
         """
@@ -88,8 +111,13 @@ class QLearningAgent(ReinforcementAgent):
         legalActions = self.getLegalActions(state)
         action = None
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        legalActions = self.getLegalActions(state)
+        if not legalActions:
+            return None
 
+        if util.flipCoin(self.epsilon):
+            return random.choice(legalActions)
+        action = self.computeActionFromQValues(state)
         return action
 
     def update(self, state, action, nextState, reward):
@@ -102,7 +130,10 @@ class QLearningAgent(ReinforcementAgent):
           it will be called on your behalf
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        currentQ = self.getQValue(state, action) # current estimate
+        next_value = self.computeValueFromQValues(nextState) # sample estimate
+        sample = reward + (self.discount * next_value)
+        self.qValues[(state, action)] = (1 - self.alpha) * currentQ + self.alpha * sample # update rule
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
@@ -165,14 +196,28 @@ class ApproximateQAgent(PacmanQAgent):
           where * is the dotProduct operator
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        features = self.featExtractor.getFeatures(state, action)
+        Qvalue = 0.0
+        for f, value in features.items():
+            Qvalue += self.weights[f] * value
+        return Qvalue
 
     def update(self, state, action, nextState, reward):
         """
            Should update your weights based on transition
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        next_value = 0.0 # compute difference
+        legalActions = self.getLegalActions(nextState)
+        if legalActions:
+            next_value = max([self.getQValue(nextState, a) for a in legalActions])
+        sample = reward + self.discount * next_value
+        current_q = self.getQValue(state, action)
+        difference = sample - current_q
+
+        features = self.featExtractor.getFeatures(state, action) # update weights
+        for f, value in features.items():
+            self.weights[f] += self.alpha * difference * value
 
     def final(self, state):
         "Called at the end of each game."
