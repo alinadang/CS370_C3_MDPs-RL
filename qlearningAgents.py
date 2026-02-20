@@ -228,4 +228,6 @@ class ApproximateQAgent(PacmanQAgent):
         if self.episodesSoFar == self.numTraining:
             # you might want to print your weights here for debugging
             "*** YOUR CODE HERE ***"
-            pass
+            print("ApproximateQAgent weights after training:")
+            for feature, weight in sorted(self.weights.items(), key=lambda x: -abs(x[1])):
+                print("  %s: %.4f" % (feature, weight))
